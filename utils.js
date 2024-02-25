@@ -38,4 +38,31 @@ export class ReservationUtils {
     const slot = new Date(0, 0, 0, hours, minutes);
     return format(minToMinus(slot, minToSubtract), "HH:mm");
   }
+
+  static getDayOfWeek() {
+    const days = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ];
+    const date = new Date();
+    const dayName = days[date.getDay()];
+    return dayName;
+  }
+
+  static getTimeSlot(slots, input) {
+    return slots.find((slot) => {
+      const start = slot.split("-")[0];
+      const end = slot.split("-")[1];
+      return input >= start && input < end;
+      // if (input >= start && input < end) {
+      //   console.log("lies in slot", start, end);
+      //   return { start, end };
+      // }
+    });
+  }
 }

@@ -24,6 +24,7 @@ db.createUser({
 db.createCollection("restaurants");
 db.createCollection("reservations");
 db.createCollection("waitlist");
+db.createCollection("seating");
 
 db.restaurants.insertMany([
   {

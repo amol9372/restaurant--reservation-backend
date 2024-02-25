@@ -3,8 +3,9 @@ import mongoose from "mongoose";
 import ReservationSchema from "../model/reservation.js";
 import RestaurantSchema from "../model/restaurants.js";
 import WaitlistSchema from "../model/waitlist.js";
+import RealtimeSeatingSchema from "../model/realtimeSeating.js";
 import { ReservationUtils } from "../utils.js";
-import { addMinutes, format, subMinutes } from "date-fns";
+import { addMinutes, format, getDay, subMinutes } from "date-fns";
 
 const router = express.Router();
 
@@ -37,25 +38,19 @@ router.get("/slots", async (req, res) => {
   try {
     const slots = [];
     const restaurant = await RestaurantSchema.findById(req.query.restaurant_id);
-    const seatingGroupReservation = getSeatingGroupReservation(
-      parseInt(req.query.no_of_ppl),
-      restaurant
-    );
+
+    const seating = await RealtimeSeatingSchema.findOne({
+      restaurant_id: req.query.restaurant_id,
+    });
 
     const preferences = restaurant.preferences; // turn_over_time, slots.gap, time_in_advance
-    const reservations = await getReservations(req.query.date);
-
-    // find eligible slots - slots which are in range of reservation time
-    const requestedSlot = new Date(
-      0,
-      0,
-      0,
-      req.query.slot.split(":")[0],
-      req.query.slot.split(":")[1]
+    const reservations = await getReservations(
+      req.query.date,
+      req.query.no_of_ppl
     );
 
-    const startSlot = format(subMinutes(requestedSlot, 60), "HH:mm");
-    const endSlot = format(addMinutes(requestedSlot, 60), "HH:mm");
+    // find eligible slots - slots which are in range of reservation time
+    const { startSlot, endSlot } = getStartEndSlot(req.query.slot, restaurant);
 
     var slotTime = startSlot;
 
@@ -85,11 +80,18 @@ router.post("/", async (req, res) => {
   session.startTransaction();
   try {
     const restaurant = await RestaurantSchema.findById(req.body.restaurant_id);
+    const seatingGroup = ReservationUtils.getValue(req.body.no_of_ppl);
 
-    const seatingGroupReservation = getSeatingGroupReservation(
-      req.body.no_of_ppl,
-      restaurant
-    );
+    // find slot
+    const slots = restaurant.slots[req.body.slot.type];
+    const slotTime = ReservationUtils.getTimeSlot(slots, req.body.slot.time);
+
+    const seating = await RealtimeSeatingSchema.findOne({
+      restaurant_id: req.body.restaurant_id,
+      groupId: seatingGroup,
+    });
+
+    const seatingSlot = seating.seating.find((item) => item.slot === slotTime);
 
     // check user reservations for the same day
     const userReservations = await getUserReservations(req.body);
@@ -98,13 +100,13 @@ router.post("/", async (req, res) => {
       throw new Error("User already has a reserved slot today");
     }
 
-    if (seatingGroupReservation.status === "available") {
+    if (seatingSlot.status === "available") {
       // no need for waitlist, create a confirmed reservation
       const reservation = new ReservationSchema(req.body);
       reservation.status = "confirmed";
       const saved = await reservation.save({ session });
       await session.commitTransaction();
-      updateRestaurantSeating(restaurant, req.body.no_of_ppl);
+      updateRestaurantSeating(seating, slotTime);
 
       res.send({ id: saved._id }).status(201);
       await session.endSession();
@@ -114,7 +116,7 @@ router.post("/", async (req, res) => {
     }
     // const seating = restaurant.realtime_seating;
   } catch (error) {
-    await session.endSession();
+    await session.abortTransaction();
     console.log(error);
     res.status(500).send({ code: "reservation_error", message: error.message });
   } finally {
@@ -138,7 +140,32 @@ router.delete("/", async (req, res) => {
   }
 });
 
-async function getReservations(date) {
+function getStartEndSlot(slot, restaurant) {
+  const requestedSlot = new Date(
+    0,
+    0,
+    0,
+    slot.split(":")[0],
+    slot.split(":")[1]
+  );
+
+  var startSlot = format(subMinutes(requestedSlot, 60), "HH:mm");
+  var endSlot = format(addMinutes(requestedSlot, 60), "HH:mm");
+
+  const dayOfWeek = ReservationUtils.getDayOfWeek();
+  const openClose = restaurant.opening_hrs[dayOfWeek];
+
+  if (startSlot <= openClose.open) {
+    startSlot = openClose.open;
+  }
+
+  if (endSlot >= openClose.close) {
+    endSlot = openClose.close;
+  }
+  return { startSlot, endSlot };
+}
+
+async function getReservations(date, no_of_ppl) {
   const startDate = new Date(date);
   startDate.setUTCHours(0, 0, 0, 0);
 
@@ -151,11 +178,12 @@ async function getReservations(date) {
       $lte: endDate.toISOString(),
     },
     status: "confirmed",
+    no_of_ppl: no_of_ppl,
   });
   return reservations;
 }
 
-function getSeatingGroupReservation(noOfPpl, restaurant) {
+function getSeatingGroupReservation(noOfPpl, seating) {
   const seatingGroup = ReservationUtils.getValue(noOfPpl);
 
   if (seatingGroup === null || seatingGroup === undefined) {
@@ -171,21 +199,19 @@ function getSeatingGroupReservation(noOfPpl, restaurant) {
   return seatingGroupReservationStatus;
 }
 
-async function updateRestaurantSeating(restaurant, no_of_ppl) {
-  const group = ReservationUtils.getValue(no_of_ppl);
-  if (restaurant.realtime_seating[group]) {
-    const groupSeating = restaurant.realtime_seating[group];
-
-    groupSeating.available = groupSeating.available - 1;
-    groupSeating.reserved = groupSeating.reserved + 1;
-
-    // Update the restaurant document
-    restaurant.realtime_seating[group] = groupSeating;
-    if (groupSeating.available <= 0) {
-      groupSeating.status = "full";
+async function updateRestaurantSeating(seating, slotTime) {
+  seating.seating.forEach((element) => {
+    if (element.slot === slotTime) {
+      element.available = element.available - 1;
+      element.reserved = element.reserved + 1;
+      if (element.available <= 0) {
+        element.status = "full";
+      }
     }
-    restaurant.save();
-  }
+  });
+
+  // Update realtime seating
+  seating.save();
 }
 
 async function createWaitList(restaurant) {

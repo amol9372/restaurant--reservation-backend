@@ -1,14 +1,31 @@
 import { Schema, model } from "mongoose";
 
+const openCloseSchema = new Schema(
+  {
+    open: String,
+    close: String,
+  },
+  { _id: false }
+);
+
+const slotSchema = new Schema(
+  {
+    morning: [String],
+    lunch: [String],
+    dinner: [String],
+  },
+  { _id: false }
+);
+
 const openingHoursSchema = new Schema(
   {
-    monday: String,
-    tuesday: String,
-    wednesday: String,
-    thursday: String,
-    friday: String,
-    saturday: String,
-    sunday: String,
+    monday: openCloseSchema,
+    tuesday: openCloseSchema,
+    wednesday: openCloseSchema,
+    thursday: openCloseSchema,
+    friday: openCloseSchema,
+    saturday: openCloseSchema,
+    sunday: openCloseSchema,
   },
   { _id: false }
 );
@@ -35,21 +52,21 @@ const seatingGroupSchema = new Schema(
     },
     total: Number,
     available: Number,
+    seated: Number,
     reserved: Number,
   },
   { _id: false }
 ); // _id is set to false to prevent creation of an unnecessary _id field
 
-// Main schema for Realtime Seating
-const realtimeSeatingSchema = new Schema(
-  {
-    "group-4": seatingGroupSchema,
-    "group-6": seatingGroupSchema,
-    "group-8": seatingGroupSchema,
-    "group-2": seatingGroupSchema,
-  },
-  { _id: false }
-);
+// const realtimeSeatingSchema = new Schema(
+//   {
+//     "group-4": seatingGroupSchema,
+//     "group-6": seatingGroupSchema,
+//     "group-8": seatingGroupSchema,
+//     "group-2": seatingGroupSchema,
+//   },
+//   { _id: false }
+// );
 
 const reservationSchema = new Schema(
   {
@@ -89,8 +106,9 @@ const RestaurantSchema = new Schema(
     },
     opening_hrs: openingHoursSchema,
     reservation: reservationSchema,
-    realtime_seating: realtimeSeatingSchema,
+    // realtime_seating: realtimeSeatingSchema,
     preferences: preferencesSchema,
+    slots: slotSchema,
   },
   { timestamps: true }
 );

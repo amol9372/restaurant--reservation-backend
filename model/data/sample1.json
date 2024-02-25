@@ -1,88 +1,62 @@
-[
-  {
-    "slot": {
-      "time": "7:00 PM",
-      "datetime": "2024-08-01T19:00:00"
-    },
-    "no_of_ppl": 4,
-    "restaurant_id": "65d3cb60b35b09cf7b968c71",
-    "user_details": {
-      "name": "Alice Johnson",
-      "email": "alice@example.com",
-      "contact_no": "123-456-7890"
-    },
-    "status": "waitlist"
-  },
-  {
-    "slot": {
-      "time": "8:00 PM",
-      "datetime": "2024-08-01T20:00:00"
-    },
-    "no_of_ppl": 2,
-    "restaurant_id": "65d3cb60b35b09cf7b968c71",
-    "user_details": {
-      "name": "Bob Smith",
-      "email": "bobsmith@example.com",
-      "contact_no": "987-654-3210"
-    },
-    "status": "confirmed"
-  },
-  {
-    "slot": {
-      "time": "6:00 PM",
-      "datetime": "2024-08-01T18:00:00"
-    },
-    "no_of_ppl": 3,
-    "restaurant_id": "65d3cb60b35b09cf7b968c71",
-    "user_details": {
-      "name": "Carol White",
-      "email": "carolwhite@example.com",
-      "contact_no": "456-123-7890"
-    },
-    "status": "cancelled"
-  },
-  {
-    "name": "Maple Delights",
-    "type": ["Canadian", "Contemporary"],
-    "location": {
-      "type": "Point",
-      "coordinates": [-79.3832, 43.6532]
-    },
-    "address": "123 Queen St, Toronto, ON M5H 2M9, Canada",
-    "opening_hrs": {
-      "monday": "8:00 AM - 8:00 PM",
-      "tuesday": "8:00 AM - 8:00 PM",
-      "wednesday": "8:00 AM - 8:00 PM",
-      "thursday": "8:00 AM - 8:00 PM",
-      "friday": "8:00 AM - 10:00 PM",
-      "saturday": "9:00 AM - 10:00 PM",
-      "sunday": "9:00 AM - 6:00 PM"
-    },
-    "reservation": {
+{
+  "seating": [
+    {
+      "slot": "8:00-10:00",
       "status": "available",
-      "current_waitlist": null
+      "total": 5,
+      "available": 5,
+      "seated": 0,
+      "reserved": 0
     },
-    "realtime_seating": {
-      "group-4": {
-        "total": 12,
-        "available": 12,
-        "reserved": 0
-      },
-      "group-6": {
-        "total": 12,
-        "available": 12,
-        "reserved": 0
-      },
-      "group-8": {
-        "total": 6,
-        "available": 6,
-        "reserved": 0
-      },
-      "group-2": {
-        "total": 8,
-        "available": 8,
-        "reserved": 0
-      }
+    {
+      "slot": "10:00-12:00",
+      "status": "available",
+      "total": 5,
+      "available": 5,
+      "seated": 0,
+      "reserved": 0
+    },
+    {
+      "slot": "12:00-14:00",
+      "status": "available",
+      "total": 5,
+      "available": 5,
+      "seated": 0,
+      "reserved": 0
+    },
+    {
+      "slot": "14:00-16:00",
+      "status": "available",
+      "total": 5,
+      "available": 5,
+      "seated": 0,
+      "reserved": 0
+    },
+    {
+      "slot": "16:00-18:00",
+      "status": "available",
+      "total": 5,
+      "available": 5,
+      "seated": 0,
+      "reserved": 0
+    },
+    {
+      "slot": "18:00-20:00",
+      "status": "available",
+      "total": 5,
+      "available": 5,
+      "seated": 0,
+      "reserved": 0
+    },
+    {
+      "slot": "20:00-22:00",
+      "status": "available",
+      "total": 5,
+      "available": 5,
+      "seated": 0,
+      "reserved": 0
     }
-  }
-]
+  ],
+  "groupId": "group-4",
+  "restaurant_id": "65db4ffa41752e030b3816bd"
+}
