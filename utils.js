@@ -24,7 +24,7 @@ export class ReservationUtils {
   }
 
   static getValue(key) {
-    return this.pplMap.get(key);
+    return this.pplMap.get(parseInt(key));
   }
 
   static addTime(time, minToAdd) {

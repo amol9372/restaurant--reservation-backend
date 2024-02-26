@@ -38,9 +38,18 @@ router.get("/slots", async (req, res) => {
   try {
     const slots = [];
     const restaurant = await RestaurantSchema.findById(req.query.restaurant_id);
+    // const allSlots = Object.values(restaurant.slots).flatMap((timeSlots) =>
+    //   timeSlots.map((slot) => slot)
+    // );
+    let allSlots = [];
+
+    allSlots = restaurant.slots["morning"]
+      .concat(restaurant.slots["lunch"])
+      .concat(restaurant.slots["dinner"]);
 
     const seating = await RealtimeSeatingSchema.findOne({
       restaurant_id: req.query.restaurant_id,
+      groupId: ReservationUtils.getValue(req.query.no_of_ppl),
     });
 
     const preferences = restaurant.preferences; // turn_over_time, slots.gap, time_in_advance
@@ -55,13 +64,21 @@ router.get("/slots", async (req, res) => {
     var slotTime = startSlot;
 
     while (slotTime <= endSlot) {
-      var reservation = reservations.find(
-        (item) =>
-          item.slot.time === slotTime &&
-          item.no_of_ppl === parseInt(req.query.no_of_ppl)
+      // var reservation = reservations.find(
+      //   (item) =>
+      //     item.slot.time === slotTime &&
+      //     item.no_of_ppl === parseInt(req.query.no_of_ppl)
+      // );
+
+      const restaurantSlotTime = ReservationUtils.getTimeSlot(
+        allSlots,
+        req.query.slot
+      );
+      const groupSeating = seating.seating.find(
+        (item) => item.slot === restaurantSlotTime
       );
 
-      if (!reservation) {
+      if (groupSeating.available > 0) {
         slots.push(slotTime);
       }
 
@@ -104,6 +121,10 @@ router.post("/", async (req, res) => {
       // no need for waitlist, create a confirmed reservation
       const reservation = new ReservationSchema(req.body);
       reservation.status = "confirmed";
+      reservation.status_tree.addToSet({
+        status: "confirmed",
+        date: new Date(),
+      });
       const saved = await reservation.save({ session });
       await session.commitTransaction();
       updateRestaurantSeating(seating, slotTime);
@@ -113,6 +134,24 @@ router.post("/", async (req, res) => {
     } else if (restaurant.reservation.current_waitlist === null) {
       // put request in pending state or a queue
       console.log("Putting the request in the queue");
+
+      const reservation = new ReservationSchema(req.body);
+      reservation.status = "pending";
+      reservation.status_tree.addToSet({
+        status: "pending",
+        date: new Date(),
+      });
+      const saved = await reservation.save({ session });
+      await session.commitTransaction();
+
+      res
+        .send({
+          id: saved._id,
+          code: "reservation_full",
+          message: "Putting the request in the queue",
+        })
+        .status(201);
+      await session.endSession();
     }
     // const seating = restaurant.realtime_seating;
   } catch (error) {
@@ -157,14 +196,34 @@ function getStartEndSlot(slot, restaurant) {
 
   if (startSlot <= openClose.open) {
     startSlot = openClose.open;
+    endSlot = format(
+      addMinutes(
+        new Date(0, 0, 0, startSlot.split(":")[0], startSlot.split(":")[1]),
+        120
+      ),
+      "HH:mm"
+    );
   }
 
-  if (endSlot >= openClose.close) {
+  if (startSlot >= openClose.close) {
     endSlot = openClose.close;
+    startSlot = format(
+      subMinutes(
+        new Date(0, 0, 0, endSlot.split(":")[0], endSlot.split(":")[1]),
+        120
+      ),
+      "HH:mm"
+    );
   }
+
   return { startSlot, endSlot };
 }
 
+/**
+ *
+ * @param {Date} date
+ * @param {Number} no_of_ppl
+ */
 async function getReservations(date, no_of_ppl) {
   const startDate = new Date(date);
   startDate.setUTCHours(0, 0, 0, 0);
@@ -172,14 +231,20 @@ async function getReservations(date, no_of_ppl) {
   const endDate = new Date(date);
   endDate.setUTCHours(23, 59, 59, 999);
 
-  const reservations = await ReservationSchema.find({
+  const getReservationsRequest = {
     createdAt: {
       $gte: startDate.toISOString(),
       $lte: endDate.toISOString(),
     },
     status: "confirmed",
-    no_of_ppl: no_of_ppl,
-  });
+  };
+
+  if (no_of_ppl) {
+    getReservationsRequest.no_of_ppl = no_of_ppl;
+  }
+
+  const reservations = await ReservationSchema.find(getReservationsRequest);
+
   return reservations;
 }
 

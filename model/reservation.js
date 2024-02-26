@@ -8,6 +8,25 @@ const userDetailsSchema = new Schema({
   contact_no: String,
 });
 
+const statusSchema = new Schema(
+  {
+    status: {
+      type: String,
+      enum: [
+        "waitlist",
+        "confirmed",
+        "pending",
+        "cancelled",
+        "seated",
+        "departed",
+      ],
+      default: "seated",
+    },
+    date: Date,
+  },
+  { _id: false }
+);
+
 /**
  * Main Schema
  */
@@ -22,9 +41,17 @@ const reservationSchema = new Schema(
     user_details: userDetailsSchema,
     status: {
       type: String,
-      enum: ["waitlist", "confirmed", "pending", "cancelled"],
+      enum: [
+        "waitlist",
+        "confirmed",
+        "pending",
+        "cancelled",
+        "seated",
+        "departed",
+      ],
       default: "pending",
     },
+    status_tree: [statusSchema],
     waitlist: {
       type: Schema.Types.ObjectId,
       ref: "Waitlist",

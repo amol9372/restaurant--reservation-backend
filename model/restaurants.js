@@ -43,31 +43,6 @@ const preferencesSchema = new Schema(
   { _id: false }
 );
 
-const seatingGroupSchema = new Schema(
-  {
-    status: {
-      type: String,
-      enum: ["waitlist", "available", "full"],
-      default: "available",
-    },
-    total: Number,
-    available: Number,
-    seated: Number,
-    reserved: Number,
-  },
-  { _id: false }
-); // _id is set to false to prevent creation of an unnecessary _id field
-
-// const realtimeSeatingSchema = new Schema(
-//   {
-//     "group-4": seatingGroupSchema,
-//     "group-6": seatingGroupSchema,
-//     "group-8": seatingGroupSchema,
-//     "group-2": seatingGroupSchema,
-//   },
-//   { _id: false }
-// );
-
 const reservationSchema = new Schema(
   {
     current_waitlist: {
